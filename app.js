@@ -1110,74 +1110,96 @@ class TardinessMonitor {
     }
 
     async exportToPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-
-        // Get date range info
-        const dateInfo = this.getCurrentDateRangeInfo();
-        
-        // Add school logo (if available and enabled)
-        const includeLogo = !this.exportOptions || this.exportOptions.includeLogo;
-        if (includeLogo) {
-            try {
-                const logoImg = new Image();
-                logoImg.src = './logo/comsite-logo-trans.png';
-                await new Promise((resolve) => {
-                    logoImg.onload = () => {
-                        // Add logo as watermark in center with better visibility
-                        doc.addImage(logoImg, 'PNG', 75, 90, 60, 60, '', 'NONE', 0.2);
-                        resolve();
-                    };
-                    logoImg.onerror = resolve; // Continue even if logo fails
-                    setTimeout(resolve, 2000); // Timeout after 2 seconds
-                });
-            } catch (error) {
-                console.log('Logo not loaded for PDF export');
+        try {
+            console.log('Starting PDF export...');
+            
+            // Show loading message
+            this.showToast('Generating PDF report...', 'info');
+            
+            // Check if jsPDF is available
+            if (!window.jspdf) {
+                throw new Error('jsPDF library not loaded');
             }
-        }
-
-        // Set theme color
-        const themeColor = [9, 135, 68]; // #098744 in RGB
-        
-        // Header
-        doc.setTextColor(...themeColor);
-        doc.setFontSize(24);
-        doc.setFont(undefined, 'bold');
-        doc.text('Tardiness Monitoring Report', 105, 30, { align: 'center' });
-        
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'normal');
-        doc.text(dateInfo.title, 105, 45, { align: 'center' });
-
-        // Generation info
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(10);
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 55, { align: 'center' });
-
-        // Check if summary mode is enabled
-        const isSummaryMode = this.exportOptions?.contentType === 'summary';
-        
-        let tableData, headers, dataCount;
-        
-        if (isSummaryMode) {
-            // Summary mode: show section-based late counts
-            const summaryData = this.getSummaryDataBySection();
             
-            tableData = summaryData.map(entry => [
-                entry.grade,
-                entry.strand,
-                entry.section,
-                entry.count.toString()
-            ]);
+            const { jsPDF } = window.jspdf;
             
-            headers = ['Grade', 'Strand', 'Section', 'Late Count'];
-            dataCount = summaryData.reduce((total, entry) => total + entry.count, 0);
-        } else {
-            // Individual records mode
-            const filteredData = this.getFilteredDataForExport();
-            const dateTimeColumns = this.exportOptions?.dateTimeColumns || 'both';
-            const includeDate = dateTimeColumns === 'both' || dateTimeColumns === 'date';
-            const includeTime = dateTimeColumns === 'both' || dateTimeColumns === 'time';
+            if (!jsPDF) {
+                throw new Error('jsPDF constructor not available');
+            }
+            
+            console.log('jsPDF loaded successfully');
+            const doc = new jsPDF();
+
+            // Get date range info
+            const dateInfo = this.getCurrentDateRangeInfo();
+            
+            // Add school logo (if available and enabled)
+            const includeLogo = !this.exportOptions || this.exportOptions.includeLogo;
+            if (includeLogo) {
+                try {
+                    const logoImg = new Image();
+                    logoImg.crossOrigin = 'anonymous';
+                    logoImg.src = '/logo/comsite-logo-trans.png'; // Use absolute path for Vercel
+                    await new Promise((resolve) => {
+                        logoImg.onload = () => {
+                            console.log('Logo loaded for PDF');
+                            // Add logo as watermark in center with better visibility
+                            doc.addImage(logoImg, 'PNG', 75, 90, 60, 60, '', 'NONE', 0.2);
+                            resolve();
+                        };
+                        logoImg.onerror = (error) => {
+                            console.log('Logo not loaded for PDF export:', error);
+                            resolve(); // Continue even if logo fails
+                        };
+                        setTimeout(resolve, 2000); // Timeout after 2 seconds
+                    });
+                } catch (error) {
+                    console.log('Logo loading error:', error);
+                }
+            }
+
+            // Set theme color
+            const themeColor = [9, 135, 68]; // #098744 in RGB
+            
+            // Header
+            doc.setTextColor(...themeColor);
+            doc.setFontSize(24);
+            doc.setFont(undefined, 'bold');
+            doc.text('Tardiness Monitoring Report', 105, 30, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'normal');
+            doc.text(dateInfo.title, 105, 45, { align: 'center' });
+
+            // Generation info
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 55, { align: 'center' });
+
+            // Check if summary mode is enabled
+            const isSummaryMode = this.exportOptions?.contentType === 'summary';
+            
+            let tableData, headers, dataCount;
+            
+            if (isSummaryMode) {
+                // Summary mode: show section-based late counts
+                const summaryData = this.getSummaryDataBySection();
+                
+                tableData = summaryData.map(entry => [
+                    entry.grade,
+                    entry.strand,
+                    entry.section,
+                    entry.count.toString()
+                ]);
+                
+                headers = ['Grade', 'Strand', 'Section', 'Late Count'];
+                dataCount = summaryData.reduce((total, entry) => total + entry.count, 0);
+            } else {
+                // Individual records mode
+                const filteredData = this.getFilteredDataForExport();
+                const dateTimeColumns = this.exportOptions?.dateTimeColumns || 'both';
+                const includeDate = dateTimeColumns === 'both' || dateTimeColumns === 'date';
+                const includeTime = dateTimeColumns === 'both' || dateTimeColumns === 'time';
             
             tableData = filteredData.map(entry => {
                 const date = new Date(entry.timestamp);
@@ -1210,29 +1232,86 @@ class TardinessMonitor {
         }
 
         // Add table
-        doc.autoTable({
-            head: [headers],
-            body: tableData,
-            startY: 70,
-            styles: { 
-                fontSize: 9,
-                cellPadding: 4,
-                textColor: [51, 51, 51]
-            },
-            headStyles: {
-                fillColor: themeColor,
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-                fontSize: 10
-            },
-            alternateRowStyles: {
-                fillColor: [248, 249, 250]
-            },
-            theme: 'striped'
-        });
+        console.log('Adding table to PDF...');
+        
+        // Check if autoTable is available
+        if (!doc.autoTable) {
+            console.warn('autoTable not available, creating simple PDF without table');
+            
+            // Simple fallback without table
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Export Data:', 20, 80);
+            
+            // Add simple text data
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            let yPosition = 95;
+            
+            if (isSummaryMode) {
+                const summaryData = this.getSummaryDataBySection();
+                doc.text('Summary by Section:', 20, yPosition);
+                yPosition += 10;
+                
+                summaryData.forEach((entry, index) => {
+                    if (yPosition > 270) { // Check page height
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    const text = `${entry.grade} ${entry.strand} - ${entry.section}: ${entry.count} late(s)`;
+                    doc.text(text, 20, yPosition);
+                    yPosition += 8;
+                });
+            } else {
+                const filteredData = this.getFilteredDataForExport();
+                doc.text('Individual Records:', 20, yPosition);
+                yPosition += 10;
+                
+                filteredData.slice(0, 30).forEach((entry, index) => { // Limit to first 30 entries
+                    if (yPosition > 270) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    const date = new Date(entry.timestamp);
+                    const text = `${entry.fullName} - ${entry.grade} ${entry.strand} ${entry.section} - ${date.toLocaleDateString()}`;
+                    doc.text(text, 20, yPosition);
+                    yPosition += 8;
+                });
+                
+                if (filteredData.length > 30) {
+                    doc.text(`... and ${filteredData.length - 30} more entries`, 20, yPosition + 5);
+                }
+            }
+            
+        } else {
+            // Use autoTable if available
+            doc.autoTable({
+                head: [headers],
+                body: tableData,
+                startY: 70,
+                styles: { 
+                    fontSize: 9,
+                    cellPadding: 4,
+                    textColor: [51, 51, 51]
+                },
+                headStyles: {
+                    fillColor: themeColor,
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    fontSize: 10
+                },
+                alternateRowStyles: {
+                    fillColor: [248, 249, 250]
+                },
+                theme: 'striped'
+            });
+        }
+
+        console.log('Content added successfully');
 
         // Footer with statistics
-        const finalY = doc.lastAutoTable.finalY + 20;
+        const finalY = doc.autoTable ? (doc.lastAutoTable.finalY + 20) : 250;
         
         doc.setTextColor(...themeColor);
         doc.setFontSize(12);
@@ -1256,9 +1335,23 @@ class TardinessMonitor {
         }
 
         const fileName = `tardiness_report_${new Date().toISOString().split('T')[0]}.pdf`;
+        console.log('Saving PDF as:', fileName);
         doc.save(fileName);
         
         this.showToast('Professional PDF exported successfully!', 'success');
+        console.log('PDF export completed successfully');
+        
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            this.showToast(`PDF export failed: ${error.message}`, 'error');
+            
+            // Show more specific error messages
+            if (error.message.includes('jsPDF')) {
+                this.showToast('PDF library not loaded. Please refresh the page and try again.', 'error');
+            } else if (error.message.includes('autoTable')) {
+                this.showToast('PDF table plugin not available. Please refresh the page and try again.', 'error');
+            }
+        }
     }
 
     async exportToImage() {
