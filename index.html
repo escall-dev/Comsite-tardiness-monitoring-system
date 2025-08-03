@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tardiness Monitoring System</title>
+    <link rel="stylesheet" href="styles.css?v=1.1">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="logo-section">
+                <img src="logo/comsite-logo-trans.png" alt="School Logo" class="school-logo">
+                <h1>Tardiness Monitoring System</h1>
+            </div>
+            <div class="header-controls">
+                <div class="clock-section">
+                    <div class="current-time" id="currentTime"></div>
+                    <div class="current-date" id="currentDate"></div>
+                </div>
+                <div class="theme-toggle">
+                    <button id="themeToggle" class="theme-btn">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Mode Toggle Section -->
+        <div class="mode-toggle-section">
+            <button id="manualModeBtn" class="mode-btn active">Manual Mode</button>
+            <button id="quickSelectModeBtn" class="mode-btn">Quick Select Mode</button>
+        </div>
+
+        <!-- Manual Mode Form -->
+        <div id="manualMode" class="input-section">
+            <div class="manual-mode-header">
+                <h3>Manual Entry</h3>
+                <button id="addManualEntryBtn" class="add-btn">
+                    <i class="fas fa-plus"></i> Add Entry
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Select Mode -->
+        <div id="quickSelectMode" class="input-section" style="display: none;">
+            <div class="quick-select-header">
+                <h3>Quick Select Options</h3>
+                <button id="addQuickSelectBtn" class="add-btn">
+                    <i class="fas fa-plus"></i> Add New Option
+                </button>
+            </div>
+            <div class="quick-select-grid" id="quickSelectGrid">
+                <!-- Dynamic quick select buttons will be generated here -->
+            </div>
+        </div>
+
+        <!-- Grade-Strand-Section Management Modal -->
+        <div id="managementModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Manage Grade-Strand-Section Options</h2>
+                <form id="managementForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newGrade">Grade:</label>
+                            <input type="number" id="newGrade" min="7" max="12" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newStrand">Strand:</label>
+                            <input type="text" id="newStrand" required placeholder="e.g., STEM, HUMSS">
+                        </div>
+                        <div class="form-group">
+                            <label for="newSection">Section:</label>
+                            <input type="text" id="newSection" required placeholder="e.g., A, B, C">
+                        </div>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="submit" class="save-btn">Add Option</button>
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Manual Entry Modal -->
+        <div id="manualEntryModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Record Late Entry</h2>
+                <form id="manualForm">
+                    <div class="form-group">
+                        <label for="fullName">Full Name:</label>
+                        <input type="text" id="fullName" required placeholder="Enter student's full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="grade">Grade:</label>
+                        <select id="grade" required>
+                            <option value="">Select Grade</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="strand">Strand:</label>
+                        <select id="strand" required>
+                            <option value="">Select Strand</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="section">Section:</label>
+                        <select id="section" required>
+                            <option value="">Select Section</option>
+                        </select>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="submit" class="save-btn">Record Late Entry</button>
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Streamlined Search and Filter Panel -->
+        <div class="filter-section">
+            <div class="filter-header">
+                <h3>Search & Filter</h3>
+                <div class="filter-toggle">
+                    <button id="filterToggle" class="filter-toggle-btn">
+                        <i class="fas fa-filter"></i> Filters
+                    </button>
+                </div>
+            </div>
+            <div class="filter-controls" id="filterControls">
+                <div class="search-group">
+                    <label for="searchInput">Search:</label>
+                    <div class="search-input-wrapper">
+                        <input type="text" id="searchInput" placeholder="Search by name, grade, strand, or section...">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <div class="filter-item">
+                        <label for="gradeFilter">Grade:</label>
+                        <select id="gradeFilter">
+                            <option value="">All Grades</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="strandFilter">Strand:</label>
+                        <select id="strandFilter">
+                            <option value="">All Strands</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="sectionFilter">Section:</label>
+                        <select id="sectionFilter">
+                            <option value="">All Sections</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="sortOrder">Sort:</label>
+                        <select id="sortOrder">
+                            <option value="desc">Date Descending</option>
+                            <option value="asc">Date Ascending</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Buttons -->
+        <div class="export-section">
+            <button id="exportExcel" class="export-btn">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+            <button id="exportPDF" class="export-btn">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+            <button id="exportImage" class="export-btn">
+                <i class="fas fa-image"></i> Smart Export
+            </button>
+            
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container">
+            <table id="dataTable" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Grade</th>
+                        <th>Strand</th>
+                        <th>Section</th>
+                        <th>Date & Time</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="summary-section">
+            <div class="summary-card">
+                <h3>Today's Lates</h3>
+                <span id="todayCount" class="summary-count">0</span>
+            </div>
+            <div class="summary-card">
+                <h3>This Week's Lates</h3>
+                <span id="weekCount" class="summary-count">0</span>
+            </div>
+            <div class="summary-card">
+                <h3>This Month's Lates</h3>
+                <span id="monthCount" class="summary-count">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Entry</h2>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="editFullName">Full Name:</label>
+                    <input type="text" id="editFullName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editGrade">Grade:</label>
+                    <select id="editGrade" required>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editStrand">Strand:</label>
+                    <select id="editStrand" required>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editSection">Section:</label>
+                    <select id="editSection" required>
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="save-btn">Save Changes</button>
+                    <button type="button" class="cancel-btn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content delete-modal">
+            <span class="close" onclick="app.closeDeleteModal()"><i class="fas fa-times"></i></span>
+            <div class="delete-modal-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2>Confirm Deletion</h2>
+            </div>
+            <div class="delete-modal-body">
+                <p id="deleteMessage">Are you sure you want to delete this option?</p>
+                <div class="delete-info">
+                    <strong id="deleteDetails"></strong>
+                </div>
+            </div>
+            <div class="delete-modal-footer">
+                <button type="button" class="confirm-delete-btn" onclick="app.confirmDelete()">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+                <button type="button" class="cancel-delete-btn" onclick="app.closeDeleteModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="if(window.app) { window.app.closeExportModal(); } else { document.getElementById('exportModal').style.display='none'; }">&times;</span>
+            <h2><i class="fas fa-download"></i> Export Options</h2>
+            
+            <div class="export-form">
+                <!-- Date Range Selection -->
+                <div class="form-group">
+                    <label><strong>📅 Select Date Range:</strong></label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="dateRange" value="today" checked>
+                            <span>Today Only</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dateRange" value="week">
+                            <span>This Week</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dateRange" value="month">
+                            <span>This Month</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dateRange" value="custom">
+                            <span>Custom Range</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Custom Date Range -->
+                <div id="customDateRange" class="form-group" style="display: none;">
+                    <label>Custom Date Range:</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="date" id="startDate" class="form-input">
+                        <span>to</span>
+                        <input type="date" id="endDate" class="form-input">
+                    </div>
+                </div>
+
+                <!-- Content Options -->
+                <div class="form-group">
+                    <label><strong>📋 Content Options:</strong></label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="includeLogo" checked>
+                            <span>Include School Logo Watermark</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="includeDateTime" checked>
+                            <span>Show Export Date & Time at Bottom</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Date/Time Column Options -->
+                <div class="form-group">
+                    <label><strong>🕐 Export Type & Columns:</strong></label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="dateTimeColumns" value="both" checked>
+                            <span>Individual Records - Date & Time</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dateTimeColumns" value="date">
+                            <span>Individual Records - Date Only</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dateTimeColumns" value="time">
+                            <span>Individual Records - Time Only</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dateTimeColumns" value="none">
+                            <span>Individual Records - Basic Info Only</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dateTimeColumns" value="summary">
+                            <span>📊 Summary by Section (Count of Lates)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Export Format -->
+                <div class="form-group">
+                    <label><strong>📄 Export Format:</strong></label>
+                    <div class="format-buttons">
+                        <button type="button" class="format-btn" data-format="image">
+                            <i class="fas fa-image"></i> Professional Image (PNG)
+                        </button>
+                        <button type="button" class="format-btn" data-format="pdf">
+                            <i class="fas fa-file-pdf"></i> Professional PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="firebase-config.js?v=1.1"></script>
+    <script src="app.js?v=1.1"></script>
+</body>
+</html> 
