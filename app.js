@@ -1281,30 +1281,49 @@ class TardinessMonitor {
             // Give extra time for logo to render
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            const canvas = await html2canvas(exportContainer, {
+            // Check if mobile for different canvas settings
+            const isMobile = window.innerWidth <= 768;
+            const canvasOptions = {
                 backgroundColor: '#ffffff',
-                scale: 2,
+                scale: isMobile ? 1.5 : 2, // Lower scale for mobile to prevent memory issues
                 width: exportContainer.offsetWidth,
                 height: exportContainer.offsetHeight,
                 useCORS: true,
                 allowTaint: false,
                 logging: true,
                 imageTimeout: 5000,
-                removeContainer: false
-            });
+                removeContainer: false,
+                scrollX: 0,
+                scrollY: 0
+            };
+            
+            console.log('Canvas options:', canvasOptions);
+            
+            const canvas = await html2canvas(exportContainer, canvasOptions);
             
             console.log('Canvas created successfully');
             
             // Remove the temporary container
             document.body.removeChild(exportContainer);
             
+            // Create download
             const link = document.createElement('a');
-            link.download = `tardiness_report_${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            const timestamp = new Date().toISOString().split('T')[0];
+            link.download = `tardiness_report_${timestamp}.png`;
+            
+            // Convert to blob for better mobile compatibility
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                link.href = url;
+                link.click();
+                
+                // Clean up the URL after download
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }, 'image/png', 0.95);
             
             this.showToast('Professional report exported successfully!', 'success');
             console.log('Image export completed successfully');
+            
         } catch (error) {
             console.error('Error exporting image:', error);
             this.showToast(`Export failed: ${error.message}`, 'error');
@@ -1320,15 +1339,21 @@ class TardinessMonitor {
     createProfessionalExportView() {
         const container = document.createElement('div');
         container.id = 'professionalExportContainer';
+        
+        // Check if we're on mobile
+        const isMobile = window.innerWidth <= 768;
+        const containerWidth = isMobile ? '600px' : '800px';
+        const padding = isMobile ? '20px' : '40px';
+        
         container.style.cssText = `
             position: fixed;
             top: -9999px;
             left: -9999px;
-            width: 800px;
-            min-height: 600px;
+            width: ${containerWidth};
+            min-height: ${isMobile ? '400px' : '600px'};
             background: #ffffff;
             font-family: 'Poppins', 'Segoe UI', sans-serif;
-            padding: 40px;
+            padding: ${padding};
             box-sizing: border-box;
         `;
 
@@ -1346,21 +1371,24 @@ class TardinessMonitor {
         
         // Add school logo as background watermark (if enabled)
         if (!this.exportOptions || this.exportOptions.includeLogo) {
+            const logoSize = isMobile ? '250px' : '400px';
+            const logoTop = isMobile ? '80px' : '150px';
+            
             // Create logo watermark container
             const logoWatermark = document.createElement('div');
             logoWatermark.style.cssText = `
                 position: absolute;
-                top: 150px;
+                top: ${logoTop};
                 left: 50%;
                 transform: translateX(-50%);
-                width: 400px;
-                height: 400px;
+                width: ${logoSize};
+                height: ${logoSize};
                 z-index: 0;
                 pointer-events: none;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 14px;
+                font-size: ${isMobile ? '12px' : '14px'};
                 color: rgba(9, 135, 68, 0.3);
                 text-align: center;
             `;
@@ -1385,8 +1413,8 @@ class TardinessMonitor {
                 logoWatermark.innerHTML = 'SCHOOL LOGO<br>WATERMARK';
             };
             
-            // Try to load the logo
-            logoImg.src = './logo/comsite-logo-trans.png';
+            // Use absolute path for Vercel deployment
+            logoImg.src = '/logo/comsite-logo-trans.png';
             
             // Set initial fallback text
             logoWatermark.innerHTML = 'LOADING LOGO...';
@@ -1400,10 +1428,10 @@ class TardinessMonitor {
         const reportTitle = isSummaryMode ? 'Summary of Lates by Section' : 'Tardiness Monitoring Report';
         
         header.innerHTML = `
-            <h1 style="color: #098744; font-size: 28px; font-weight: 700; margin: 0 0 20px 0;">
+            <h1 style="color: #098744; font-size: ${isMobile ? '22px' : '28px'}; font-weight: 700; margin: 0 0 ${isMobile ? '15px' : '20px'} 0;">
                 ${reportTitle}
             </h1>
-            <p style="color: #666; font-size: 14px; margin: 0;">
+            <p style="color: #666; font-size: ${isMobile ? '12px' : '14px'}; margin: 0;">
                 Generated on: ${new Date().toLocaleString()}
             </p>
         `;
@@ -1415,28 +1443,20 @@ class TardinessMonitor {
         tableContainer.style.cssText = `
             background: rgba(255, 255, 255, 0.75);
             border-radius: 8px;
-            padding: 20px;
+            padding: ${isMobile ? '15px' : '20px'};
             position: relative;
             z-index: 2;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            background-image: url('./logo/comsite-logo-trans.png');
-            background-size: 400px 400px;
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-blend-mode: overlay;
+            overflow-x: auto;
         `;
         
         const table = document.createElement('table');
         table.style.cssText = `
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            font-size: ${isMobile ? '10px' : '12px'};
             color: #333;
-            background-image: url('./logo/comsite-logo-trans.png');
-            background-size: 200px 200px;
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-blend-mode: soft-light;
+            min-width: ${isMobile ? '500px' : '600px'};
         `;
         
         // Create table header
@@ -1449,26 +1469,28 @@ class TardinessMonitor {
         
         if (isSummary) {
             // Summary table headers
+            const cellPadding = isMobile ? '8px 4px' : '12px 8px';
             headerCells = `
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Grade</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Strand</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Section</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Total Count of Lates</th>
+                <th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Grade</th>
+                <th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Strand</th>
+                <th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Section</th>
+                <th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Total Count</th>
             `;
         } else {
             // Individual records headers
+            const cellPadding = isMobile ? '8px 4px' : '12px 8px';
             headerCells = `
-                <th style="padding: 12px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #076a35;">Name</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Grade</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Strand</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Section</th>
+                <th style="padding: ${cellPadding}; text-align: left; font-weight: 600; border-bottom: 2px solid #076a35;">Name</th>
+                <th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Grade</th>
+                <th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Strand</th>
+                <th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Section</th>
             `;
             
             if (includeDate) {
-                headerCells += `<th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Date</th>`;
+                headerCells += `<th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Date</th>`;
             }
             if (includeTime) {
-                headerCells += `<th style="padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Time</th>`;
+                headerCells += `<th style="padding: ${cellPadding}; text-align: center; font-weight: 600; border-bottom: 2px solid #076a35;">Time</th>`;
             }
         }
         
@@ -1482,6 +1504,7 @@ class TardinessMonitor {
         if (isSummary) {
             // Create summary data grouped by section
             const summaryData = this.getSummaryDataBySection();
+            const cellPadding = isMobile ? '6px 4px' : '10px 8px';
             
             summaryData.forEach((entry, index) => {
                 const row = document.createElement('tr');
@@ -1492,16 +1515,17 @@ class TardinessMonitor {
                 `;
                 
                 row.innerHTML = `
-                    <td style="padding: 10px 8px; text-align: center; border-right: 1px solid #ccc;">${entry.grade}</td>
-                    <td style="padding: 10px 8px; text-align: center; border-right: 1px solid #ccc;">${entry.strand}</td>
-                    <td style="padding: 10px 8px; text-align: center; border-right: 1px solid #ccc;">${entry.section}</td>
-                    <td style="padding: 10px 8px; text-align: center; font-weight: 600; color: #098744;">${entry.count}</td>
+                    <td style="padding: ${cellPadding}; text-align: center; border-right: 1px solid #ccc;">${entry.grade}</td>
+                    <td style="padding: ${cellPadding}; text-align: center; border-right: 1px solid #ccc;">${entry.strand}</td>
+                    <td style="padding: ${cellPadding}; text-align: center; border-right: 1px solid #ccc;">${entry.section}</td>
+                    <td style="padding: ${cellPadding}; text-align: center; font-weight: 600; color: #098744;">${entry.count}</td>
                 `;
                 tbody.appendChild(row);
             });
         } else {
             // Individual records
             const filteredData = this.getFilteredDataForExport();
+            const cellPadding = isMobile ? '6px 4px' : '10px 8px';
             
             filteredData.forEach((entry, index) => {
                 const row = document.createElement('tr');
@@ -1514,17 +1538,17 @@ class TardinessMonitor {
                 const date = new Date(entry.timestamp);
                 
                 let dataCells = `
-                    <td style="padding: 10px 8px; border-right: 1px solid #ccc;">${entry.fullName}</td>
-                    <td style="padding: 10px 8px; text-align: center; border-right: 1px solid #ccc;">${entry.grade}</td>
-                    <td style="padding: 10px 8px; text-align: center; border-right: 1px solid #ccc;">${entry.strand}</td>
-                    <td style="padding: 10px 8px; text-align: center; ${(!includeDate && !includeTime) ? '' : 'border-right: 1px solid #ccc;'}">${entry.section}</td>
+                    <td style="padding: ${cellPadding}; border-right: 1px solid #ccc;">${entry.fullName}</td>
+                    <td style="padding: ${cellPadding}; text-align: center; border-right: 1px solid #ccc;">${entry.grade}</td>
+                    <td style="padding: ${cellPadding}; text-align: center; border-right: 1px solid #ccc;">${entry.strand}</td>
+                    <td style="padding: ${cellPadding}; text-align: center; ${(!includeDate && !includeTime) ? '' : 'border-right: 1px solid #ccc;'}">${entry.section}</td>
                 `;
                 
                 if (includeDate) {
-                    dataCells += `<td style="padding: 10px 8px; text-align: center; ${!includeTime ? '' : 'border-right: 1px solid #ccc;'}">${date.toLocaleDateString()}</td>`;
+                    dataCells += `<td style="padding: ${cellPadding}; text-align: center; ${!includeTime ? '' : 'border-right: 1px solid #ccc;'}">${date.toLocaleDateString()}</td>`;
                 }
                 if (includeTime) {
-                    dataCells += `<td style="padding: 10px 8px; text-align: center;">${date.toLocaleTimeString()}</td>`;
+                    dataCells += `<td style="padding: ${cellPadding}; text-align: center;">${date.toLocaleTimeString()}</td>`;
                 }
                 
                 row.innerHTML = dataCells;
@@ -2231,31 +2255,74 @@ class TardinessMonitor {
     }
 
     async confirmDuplicateEntry() {
+        console.log('Confirming duplicate entry...');
+        
         if (this.pendingDuplicateEntry) {
             const { entry, duplicateCheck } = this.pendingDuplicateEntry;
             
-            // Add the duplicate entry
-            await this.addEntry(entry);
+            // Close the modal first to prevent any UI issues
+            this.closeDuplicateModal();
             
-            // Show success message for duplicate
-            this.showDuplicateSuccess(entry, duplicateCheck.count);
+            // Add the duplicate entry directly without checking for duplicates again
+            try {
+                console.log('Adding confirmed duplicate entry:', entry);
+                
+                // Add to local data
+                this.data.unshift(entry);
+                this.filteredData.unshift(entry);
+                
+                // Update UI
+                this.renderTable();
+                this.updateSummary();
+                
+                // Save to Firebase
+                if (this.isOnline && this.db && this.firebase) {
+                    console.log('Saving duplicate entry to Firebase...');
+                    const docRef = this.firebase.doc(this.db, 'tardiness', entry.id);
+                    await this.firebase.setDoc(docRef, entry);
+                    console.log('Duplicate entry saved to Firebase successfully');
+                }
+                
+                // Save to localStorage as backup
+                this.saveToLocalStorage();
+                
+                // Show success message for duplicate
+                this.showDuplicateSuccess(entry, duplicateCheck.count);
+                
+                console.log('Duplicate entry added successfully');
+                
+            } catch (error) {
+                console.error('Error adding duplicate entry:', error);
+                this.showToast('Error adding duplicate entry. Please try again.', 'error');
+            }
             
             // Clear pending entry
             this.pendingDuplicateEntry = null;
+            
+            // Reset form and focus
+            this.resetFormAndFocus();
         }
-        
-        this.closeDuplicateModal();
     }
 
     closeDuplicateModal() {
+        console.log('Closing duplicate modal...');
+        
         const modal = document.querySelector('.duplicate-modal');
         if (modal) {
             modal.classList.remove('show');
             setTimeout(() => {
-                modal.remove();
+                if (modal.parentNode) {
+                    modal.parentNode.removeChild(modal);
+                }
             }, 300);
+            console.log('Duplicate modal closed');
         }
+        
+        // Clear pending entry
         this.pendingDuplicateEntry = null;
+        
+        // Reset form when canceling to ensure user can continue
+        this.resetFormAndFocus();
     }
 
     resetFormAndFocus() {

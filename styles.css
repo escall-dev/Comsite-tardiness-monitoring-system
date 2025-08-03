@@ -924,11 +924,59 @@ body {
         margin: 2% auto;
         padding: 15px;
         border-radius: 6px;
+        max-height: 90vh;
+        overflow-y: auto;
+        transform: scale(1) !important; /* Prevent scaling issues on mobile */
     }
     
     .modal h2 {
         font-size: 1.3rem;
         margin-bottom: 15px;
+    }
+    
+    /* Duplicate modal mobile adjustments */
+    .duplicate-modal .modal-content {
+        width: 95%;
+        max-width: 400px;
+        padding: 20px;
+    }
+    
+    .duplicate-modal .modal-header {
+        margin: -20px -20px 15px -20px;
+        padding: 15px 20px;
+    }
+    
+    .duplicate-modal .modal-header h2 {
+        font-size: 1.2rem;
+    }
+    
+    .duplicate-modal .modal-body {
+        padding: 15px;
+        margin: 0;
+    }
+    
+    .duplicate-details {
+        padding: 12px;
+        margin: 10px 0;
+    }
+    
+    .duplicate-details p {
+        font-size: 0.9rem;
+        margin: 6px 0;
+    }
+    
+    .modal-buttons {
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .confirm-btn,
+    .cancel-btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 0.9rem;
+        justify-content: center;
     }
     
     .delete-modal .modal-content {

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Logo Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-container {
+            width: 800px;
+            height: 600px;
+            position: relative;
+            background: white;
+            border: 2px solid #000;
+            margin: 20px 0;
+        }
+        .logo-bg {
+            position: absolute;
+            top: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 400px;
+            background-image: url('./logo/comsite-logo-trans.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.25;
+            border: 3px solid red; /* Visible border to see the area */
+        }
+        .content {
+            position: relative;
+            z-index: 2;
+            background: rgba(255,255,255,0.85);
+            padding: 20px;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Logo Debug Test</h1>
+    
+    <h2>1. Direct Image Test</h2>
+    <img src="./logo/comsite-logo-trans.png" width="200" style="border: 1px solid #ccc;">
+    
+    <h2>2. Background Image Test (Same as Export)</h2>
+    <div class="test-container">
+        <div class="logo-bg"></div>
+        <div class="content">
+            <h3>Content Over Background</h3>
+            <p>The logo should appear as a watermark behind this content</p>
+        </div>
+    </div>
+    
+    <h2>3. Higher Opacity Test</h2>
+    <div class="test-container">
+        <div class="logo-bg" style="opacity: 0.5;"></div>
+        <div class="content">
+            <h3>50% Opacity Test</h3>
+            <p>This should be more visible</p>
+        </div>
+    </div>
+    
+    <script>
+        // Test logo loading
+        const img = new Image();
+        img.onload = function() {
+            console.log('✅ Logo loaded successfully');
+            document.getElementById('status').innerHTML = '✅ Logo loaded successfully';
+            document.getElementById('dimensions').innerHTML = `Dimensions: ${this.naturalWidth} x ${this.naturalHeight}px`;
+        };
+        img.onerror = function() {
+            console.error('❌ Logo failed to load');
+            document.getElementById('status').innerHTML = '❌ Logo failed to load';
+        };
+        img.src = './logo/comsite-logo-trans.png';
+    </script>
+    
+    <div id="status">Loading logo...</div>
+    <div id="dimensions"></div>
+</body>
+</html>
